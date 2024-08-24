@@ -1,4 +1,4 @@
-package BaseLineIEEE;
+package IEEE_Update_GlobalMinU.BaseLineIEEE;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -116,6 +116,7 @@ public class AlgoTKINC {
 	Map<Integer, UtilityList> mapItemToUtilityList;
 	int firstLine;
 	Map<Integer, Long> mapItemToUtility;
+	long minUtility_Global;
 	/**
 	 * Run the algorithm
 	 * @param input path to the input file
@@ -141,6 +142,7 @@ public class AlgoTKINC {
 		}
 
 		if(firstTime){
+			minUtility_Global = 0l;
 			mapItemToUtilityList = new HashMap<>();
 //			if (EUCS_PRUNE){
 //				mapFMAP = new HashMap<Integer, Map<Integer, ItemTHUI>>();
@@ -252,6 +254,9 @@ public class AlgoTKINC {
 //			raisingThresholdCUDOptimize(topkstatic);
 //			removeEntry();
 //		}
+		if(minUtility_Global>minUtility){
+			minUtility = minUtility_Global;
+		}
 		raisingThresholdLeaf(listOfUtilityLists);
 		setLeafMapSize();
 		//removeLeafEntry();
@@ -280,7 +285,7 @@ public class AlgoTKINC {
 		checkMemory();
 		thui(itemsetBuffer, 0, null, listOfPromisingUtilityLists);
 		checkMemory();
-
+		minUtility_Global = minUtility;
 		writeResultTofile();
 		writer.close();
 
