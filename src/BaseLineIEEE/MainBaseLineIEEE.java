@@ -1,6 +1,5 @@
 package BaseLineIEEE;
 
-import BaseLine.AlgoTopKINC;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -10,35 +9,47 @@ public class MainBaseLineIEEE {
 
 	public static void main(String[] arg) throws IOException {
 
-		String input = "DB.txt";
-		String output = ".//output.txt";
-		int k=15;
+		String input ="retail.txt";
+		String output = "output.txt";
+		int k = 10000;
+		for (int l = 0; l < 1; l++) {
+			System.out.println("k: "+k);
+			// the number of updates to be performed
+			int numberOfUpdates = 5;
 
-		// the number of updates to be performed
-		int numberOfUpdates = 1;
+			// scan the database to count the number of lines
+			// for our test purpose
+			int linecount = countLines(input);
+			int firstLine = 0;// ;
+			int lastLine = firstLine + (int) (linecount * 0.9f);
+			double addedratio = 0.1d / ((double) numberOfUpdates);
+			int linesForeEachUpdate = (int) (addedratio * linecount);
 
-		// scan the database to count the number of lines
-		// for our test purpose
-		int linecount = countLines(input);
 
-		double addedratio = 1d / ((double) numberOfUpdates);
-		int linesForeEachUpdate = (int) (addedratio * linecount);
+			// Apply the algorithm several times
+			AlgoTKINC algo = new AlgoTKINC();
+			for (int i = 0; i < numberOfUpdates+1; i++) {
+				// Applying the algorithm
+				// If this is the last update, we make sure to run until the last line
+				if (i == numberOfUpdates) {
+					System.out.println("" + (i+1) + ") Run the algorithm using line " + firstLine + " to before line "
+							+ linecount + " of the input database.");
+					algo.runAlgorithm(input, output,true, k, firstLine, linecount);
+				} else {
+					// If this is not the last update
+					System.out.println("" + (i+1) + ") Run the algorithm using line " + firstLine + " to before line "
+							+ lastLine + " of the input database.");
+					algo.runAlgorithm(input, output, true,k, firstLine, lastLine);
+				}
+				algo.printStats();
 
-		// Apply the algorithm several times
-		AlgoTHUI algo = new AlgoTHUI();
-		int firstLine = 0;
-		for (int i = 0; i < numberOfUpdates; i++) {
-			int lastLine = firstLine + linesForeEachUpdate;
-			if (i == numberOfUpdates - 1) {
-				System.out.println("" + i + ") Run the algorithm using line " + firstLine + " to before line "
-						+ linecount + " of the input database.");
-				algo.runAlgorithm(input,output,false, k, firstLine, linecount);
+				firstLine = lastLine;
+				lastLine = firstLine+linesForeEachUpdate;
+
 			}
-			algo.printStats();
+			k -= 1000;
 
-			firstLine = lastLine;
 		}
-
 	}
 
 	/**
