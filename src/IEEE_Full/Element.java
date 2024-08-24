@@ -1,4 +1,5 @@
-package IEEE_Update_GlobalMinU.BaseLineIEEE;
+package IEEE_Full;
+
 /* This file is copyright (c) 2008-2015 Philippe Fournier-Viger
 * 
 * This file is part of the SPMF DATA MINING SOFTWARE
@@ -15,15 +16,33 @@ package IEEE_Update_GlobalMinU.BaseLineIEEE;
 * You should have received a copy of the GNU General Public License along with
 * SPMF. If not, see <http://www.gnu.org/licenses/>.
 */
+
+
 /**
- * This class represent an item and its utility in a transaction
+ * This class represents an Element of a utility list as used by the HUI-Miner algorithm.
+ * 
+ * @see AlgoHUIMiner
+ * @see UtilityList
  * @author Philippe Fournier-Viger
  */
-class PairItemUtility{
-	int item = 0;
-	int utility = 0;
+public class Element {
+	// The three variables as described in the paper:
+	/** transaction id */
+	public final int tid ;   
+	/** itemset utility */
+	public final int iutils;   
+	/** remaining utility */
+	public int rutils; 
 	
-	public String toString() {
-		return "[" + item + "," + utility + "]";
+	/**
+	 * Constructor.
+	 * @param tid  the transaction id
+	 * @param iutils  the itemset utility
+	 * @param rutils  the remaining utility
+	 */
+	public Element(int tid, int iutils, int rutils){
+		this.tid = tid;
+		this.iutils = iutils;
+		this.rutils = rutils;
 	}
 }

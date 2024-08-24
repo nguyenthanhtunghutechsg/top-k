@@ -1,6 +1,5 @@
-package IEEE_Update_GlobalMinU.BaseLineIEEE;
-import java.io.Serializable;
-/* This file is copyright (c) 2008-2015 Srikumar Krishnamoorty
+package IEEE_Full;
+/* This file is copyright (c) 2008-2015 Philippe Fournier-Viger
 * 
 * This file is part of the SPMF DATA MINING SOFTWARE
 * (http://www.philippe-fournier-viger.com/spmf).
@@ -16,11 +15,15 @@ import java.io.Serializable;
 * You should have received a copy of the GNU General Public License along with
 * SPMF. If not, see <http://www.gnu.org/licenses/>.
 */
-public class ItemTHUI implements Serializable{
-	long twu = 0L;
+/**
+ * This class represent an item and its utility in a transaction
+ * @author Philippe Fournier-Viger
+ */
+class PairItemUtility{
+	int item = 0;
 	int utility = 0;
-	 
-	public String toString(){
-		return String.valueOf(utility);
+	
+	public String toString() {
+		return "[" + item + "," + utility + "]";
 	}
 }

@@ -24,7 +24,7 @@ public class MainTestTHUI {
 		
 		// Applying the algorithm
 		AlgoTHUI algorithm = new AlgoTHUI();
-		algorithm.runAlgorithm(input, output, false, k);
+		algorithm.runAlgorithm(input, output, true, k);
 		
 		// Print statistics about the algorithm execution
 		algorithm.printStats();
