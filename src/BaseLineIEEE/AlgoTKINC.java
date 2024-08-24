@@ -47,7 +47,7 @@ import java.util.PriorityQueue;
  * @author Srikumar Krishnamoorty
  *
  */
-public class AlgoTHUI {
+public class AlgoTKINC {
 
 	// variable for statistics
 	/** the maximum memory usage */
@@ -74,15 +74,9 @@ public class AlgoTHUI {
 	BufferedWriter writer = null;
 
 	/** Priority queue to store the top k patterns */
-	PriorityQueue<PatternTHUI> kPatterns = new PriorityQueue<PatternTHUI>();
+	PriorityQueue<PatternTHUI> kPatterns = new PriorityQueue<>();
 	PriorityQueue<Long> leafPruneUtils = null;
 
-	/** debug mode */
-	boolean debug = false;
-	/** total time for construction */
-	public long totalContructTime = 0;
-	public long totalWhile = 0;
-	public int totalItem = 0;
 	final int BUFFERS_SIZE = 200;
 	private int[] itemsetBuffer = null;
 
@@ -99,7 +93,7 @@ public class AlgoTHUI {
 	int[] pos;
 	int[] twu;
 
-	boolean EUCS_PRUNE = false;
+	//boolean EUCS_PRUNE = false;
 
 	class Pair {
 		int item = 0;
@@ -129,14 +123,16 @@ public class AlgoTHUI {
 		}
 	}
 
-	public AlgoTHUI() {
+	public AlgoTKINC() {
 
 	}
+	int tid;
 
 	String inputFile;
 	boolean firstTime;
-	Map<Integer, BaseLine.UtilityList> mapItemToUtilityList;
-
+	Map<Integer, UtilityList> mapItemToUtilityList;
+	int firstLine;
+	Map<Integer, Long> mapItemToUtility;
 	/**
 	 * Run the algorithm
 	 * @param input path to the input file
@@ -151,48 +147,71 @@ public class AlgoTHUI {
 		
 		maxMemory = 0;
 		itemsetBuffer = new int[BUFFERS_SIZE];
-		this.EUCS_PRUNE = eucsPrune;
-		Map<Integer, Long> RIU = new HashMap<Integer, Long>();
+		//this.EUCS_PRUNE = eucsPrune;
 
+		this.firstLine = firstLine;
 		inputFile = input;
-		if(mapItemToUtilityList==null){
+		if(firstLine==0){
 			firstTime = true;
+		}else{
+			firstTime = false;
 		}
+
 		if(firstTime){
 			mapItemToUtilityList = new HashMap<>();
-			if (EUCS_PRUNE){
-				mapFMAP = new HashMap<Integer, Map<Integer, ItemTHUI>>();
-			}
+//			if (EUCS_PRUNE){
+//				mapFMAP = new HashMap<Integer, Map<Integer, ItemTHUI>>();
+//			}
+			mapItemToUtility = new HashMap<Integer, Long>();
 			mapItemToTWU = new HashMap<Integer, Integer>();
 			mapLeafMAP = new HashMap<Integer, Map<Integer, Long>>();
-			leafPruneUtils = new PriorityQueue<Long>();
+
 		}
+		tid = firstLine;
+		minUtility = 0;
+		leafPruneUtils = new PriorityQueue<Long>();
 		startTimestamp = System.currentTimeMillis();
 		writer = new BufferedWriter(new FileWriter(output));
-
+		candidateCount = 0;
 		BufferedReader myInput = null;
 		String thisLine;
+		kPatterns = new PriorityQueue<>();
+		huiCount = 0 ;
 		try {
 			myInput = new BufferedReader(new InputStreamReader(new FileInputStream(new File(input))));
-			while ((thisLine = myInput.readLine()) != null) {
-				if (thisLine.isEmpty() == true || thisLine.charAt(0) == '#' || thisLine.charAt(0) == '%'
-						|| thisLine.charAt(0) == '@') {
-					continue;
-				}
-				String split[] = thisLine.split(":");
-				String items[] = split[0].split(" ");
-				String utilityValues[] = split[2].split(" ");
-				int transactionUtility = Integer.parseInt(split[1]);
-				for (int i = 0; i < items.length; i++) {
-					Integer item = Integer.parseInt(items[i]);
-					Integer twu = mapItemToTWU.get(item);
-					twu = (twu == null) ? transactionUtility : twu + transactionUtility;
-					mapItemToTWU.put(item, twu);
-
-					int util = Integer.parseInt(utilityValues[i]);
-					Long real = RIU.get(item);
-					real = (real == null) ? util : util + real;
-					RIU.put(item, real);
+			while ((thisLine = myInput.readLine()) != null&&tid<lastLine) {
+				if(tid>=firstLine){
+					if (thisLine.isEmpty() == true || thisLine.charAt(0) == '#' || thisLine.charAt(0) == '%'
+							|| thisLine.charAt(0) == '@') {
+						continue;
+					}
+					String split[] = thisLine.split(":");
+					String items[] = split[0].split(" ");
+					String utilityValues[] = split[2].split(" ");
+					int transactionUtility = Integer.parseInt(split[1]);
+					for (int i = 0; i < items.length; i++) {
+						Integer item = Integer.parseInt(items[i]);
+						int util = Integer.parseInt(utilityValues[i]);
+						Integer twu = mapItemToTWU.get(item);
+						Long sumUtil = mapItemToUtility.get(item);
+						Element element = new Element(tid, util, 0);
+						if(twu==null){
+							twu = transactionUtility;
+							sumUtil = (long)util;
+							UtilityList newUL = new UtilityList(item);
+							newUL.addElement(element);
+							mapItemToUtilityList.put(item, newUL);
+						}else{
+							twu += transactionUtility;
+							sumUtil+=util;
+							UtilityList uLItem = mapItemToUtilityList.get(item);
+							uLItem.addElement(element);
+							//mapItemToUtilityList.put(item, uLItem);
+						}
+						mapItemToTWU.put(item, twu);
+						mapItemToUtility.put(item, sumUtil);
+					}
+					tid++;
 				}
 			}
 		} catch (Exception e) {
@@ -203,30 +222,19 @@ public class AlgoTHUI {
 			}
 		}
 
-		raisingThresholdRIU(RIU, topkstatic);
+
+		raisingThresholdByUtilityOfSingleItem(mapItemToUtility, topkstatic);
+
 		riuRaiseValue = minUtility;
-
-		List<UtilityList> listOfUtilityLists = new ArrayList<UtilityList>();
-		Map<Integer, UtilityList> mapItemToUtilityList = new HashMap<Integer, UtilityList>();
-
-		for (Integer item : mapItemToTWU.keySet()) {
-			if (mapItemToTWU.get(item) >= minUtility) {
-				UtilityList uList = new UtilityList(item);
-				mapItemToUtilityList.put(item, uList);
-				listOfUtilityLists.add(uList);
-			}
+		List<UtilityList> listOfUtilityLists = new ArrayList<>();
+		for (UtilityList uList : mapItemToUtilityList.values()) {
+			listOfUtilityLists.add(uList);
 		}
-
 		Collections.sort(listOfUtilityLists, new UtilComparator());
-
-		int remainingUtility = 0;
-		long newTWU = 0;
-		String key = null;
-		Integer kTid;
 		try {
 			myInput = new BufferedReader(new InputStreamReader(new FileInputStream(new File(input))));
-			int tid = 0;
-			while ((thisLine = myInput.readLine()) != null) {
+			int tid = firstLine;
+			while ((thisLine = myInput.readLine()) != null&&tid<lastLine) {
 				if (thisLine.isEmpty() == true || thisLine.charAt(0) == '#' || thisLine.charAt(0) == '%'
 						|| thisLine.charAt(0) == '@') {
 					continue;
@@ -234,34 +242,18 @@ public class AlgoTHUI {
 				String split[] = thisLine.split(":");
 				String items[] = split[0].split(" ");
 				String utilityValues[] = split[2].split(" ");
-				remainingUtility = 0;
-				newTWU = 0; // NEW OPTIMIZATION
 
-				List<Pair> revisedTransaction = new ArrayList<Pair>();
+				List<Pair> revisedTransaction = new ArrayList<>();
 				for (int i = 0; i < items.length; i++) {
 					Pair pair = new Pair(Integer.parseInt(items[i]), Integer.parseInt(utilityValues[i]));
-					if (mapItemToTWU.get(pair.item) >= minUtility) {
-						revisedTransaction.add(pair);
-						remainingUtility += pair.utility;
-						newTWU += pair.utility; // NEW OPTIMIZATION
-					}
+					revisedTransaction.add(pair);
 				}
-				if (revisedTransaction.size() == 0)
-					continue;
 				Collections.sort(revisedTransaction, new PairComparator());
-
-				remainingUtility = 0;
 				for (int i = revisedTransaction.size() - 1; i >= 0; i--) {
 					Pair pair = revisedTransaction.get(i);
-					UtilityList utilityListOfItem = mapItemToUtilityList.get(pair.item);
-					Element element = new Element(tid, pair.utility, remainingUtility);
-					utilityListOfItem.addElement(element);
-
-					if (EUCS_PRUNE)
-						updateEUCSprune(i, pair, revisedTransaction, newTWU);
+//					if (EUCS_PRUNE)
+//						updateEUCSprune(i, pair, revisedTransaction, newTWU);
 					updateLeafprune(i, pair, revisedTransaction, listOfUtilityLists);
-
-					remainingUtility += pair.utility;
 				}
 				tid++; // increase tid number for next transaction
 			}
@@ -273,24 +265,37 @@ public class AlgoTHUI {
 			}
 		}
 
-		if (EUCS_PRUNE) {
-			raisingThresholdCUDOptimize(topkstatic);
-			removeEntry();
-		}
-		RIU.clear();
-
-		startTimestampPha2 = System.currentTimeMillis();
-
+//		if (EUCS_PRUNE) {
+//			raisingThresholdCUDOptimize(topkstatic);
+//			removeEntry();
+//		}
 		raisingThresholdLeaf(listOfUtilityLists);
 		setLeafMapSize();
-		removeLeafEntry();
+		//removeLeafEntry();
 		leafPruneUtils = null;
-
 		leafRaiseValue = minUtility;
-		mapItemToUtilityList = null;
-
+		System.out.println("minUtility = " + minUtility);
+		List<UtilityList> listOfPromisingUtilityLists = new ArrayList<>();
+		for (Entry<Integer, UtilityList> entry : mapItemToUtilityList.entrySet()) {
+			if (mapItemToTWU.get(entry.getKey()) >= minUtility) {
+				listOfPromisingUtilityLists.add(entry.getValue());
+			}
+		}
+		Collections.sort(listOfPromisingUtilityLists, new UtilComparator());
+		int arrayRu[] = new int[tid + 1];
+		for (int i = listOfPromisingUtilityLists.size() - 1; i >= 0; i--) {
+			UtilityList ul = listOfPromisingUtilityLists.get(i);
+			int newRemain = 0;
+			for (int j = 0; j < ul.elements.size(); j++) {
+				Element element = ul.elements.get(j);
+				element.rutils = arrayRu[element.tid];
+				arrayRu[element.tid] += element.iutils;
+				newRemain += element.rutils;
+			}
+			ul.sumRutils = newRemain;
+		}
 		checkMemory();
-		thui(itemsetBuffer, 0, null, listOfUtilityLists);
+		thui(itemsetBuffer, 0, null, listOfPromisingUtilityLists);
 		checkMemory();
 
 		writeResultTofile();
@@ -359,7 +364,7 @@ public class AlgoTHUI {
 	}
 
 	private int compareItems(int item1, int item2) {
-		int compare = 0;//(int) (mapItemToTWU.get(item1) - mapItemToTWU.get(item2));
+		int compare = (int) (mapItemToTWU.get(item1) - mapItemToTWU.get(item2));
 		return (compare == 0) ? item1 - item2 : compare;
 	}
 
@@ -395,11 +400,11 @@ public class AlgoTHUI {
 																				// safely ignored, as it is unlikely to
 																				// generate a HUI; besides the lowest
 																				// min utility will be 1
-				if (EUCS_PRUNE) {
-					Map<Integer, ItemTHUI> mapTWUF = mapFMAP.get(X.item);
-					if (mapTWUF == null)
-						continue;
-				}
+//				if (EUCS_PRUNE) {
+//					Map<Integer, ItemTHUI> mapTWUF = mapFMAP.get(X.item);
+//					if (mapTWUF == null)
+//						continue;
+//				}
 
 				List<UtilityList> exULs = new ArrayList<UtilityList>();
 				for (int j = i + 1; j < ULs.size(); j++) {
@@ -486,7 +491,6 @@ public class AlgoTHUI {
 		Collections.sort(lp, new Comparator<PatternTHUI>() {
 			public int compare(PatternTHUI o1, PatternTHUI o2) {
 				return comparePatterns(o1, o2);
-				// return comparePatternsIdx(o1, o2);
 			}
 		});
 
@@ -537,7 +541,7 @@ public class AlgoTHUI {
 		return r;
 	}
 
-	public void raisingThresholdRIU(Map<Integer, Long> map, int k) {
+	public void raisingThresholdByUtilityOfSingleItem(Map<Integer, Long> map, int k) {
 		List<Map.Entry<Integer, Long>> list = new LinkedList<Map.Entry<Integer, Long>>(map.entrySet());
 
 		Collections.sort(list, new Comparator<Map.Entry<Integer, Long>>() {
@@ -598,6 +602,7 @@ public class AlgoTHUI {
 				}
 			}
 		}
+
 		// LIU-LB
 		for (Entry<Integer, Map<Integer, Long>> entry : mapLeafMAP.entrySet()) {
 			for (Entry<Integer, Long> entry2 : entry.getValue().entrySet()) {
