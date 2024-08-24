@@ -1,4 +1,4 @@
-package BaseLineIEEE;
+package IEEE_Full;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -116,6 +116,7 @@ public class AlgoTKINC {
 	Map<Integer, UtilityList> mapItemToUtilityList;
 	int firstLine;
 	Map<Integer, Long> mapItemToUtility;
+	long minUtility_Global;
 	/**
 	 * Run the algorithm
 	 * @param input path to the input file
@@ -141,17 +142,15 @@ public class AlgoTKINC {
 		}
 
 		if(firstTime){
+			minUtility_Global = 0;
+			minUtility = 0;
 			mapItemToUtilityList = new HashMap<>();
-//			if (EUCS_PRUNE){
-//				mapFMAP = new HashMap<Integer, Map<Integer, ItemTHUI>>();
-//			}
+			mapFMAP = new HashMap<Integer, Map<Integer, ItemTHUI>>();
 			mapItemToUtility = new HashMap<Integer, Long>();
 			mapItemToTWU = new HashMap<Integer, Integer>();
 			mapLeafMAP = new HashMap<Integer, Map<Integer, Long>>();
-
 		}
 		tid = firstLine;
-		minUtility = 0;
 		leafPruneUtils = new PriorityQueue<Long>();
 		startTimestamp = System.currentTimeMillis();
 		writer = new BufferedWriter(new FileWriter(output));
@@ -225,7 +224,7 @@ public class AlgoTKINC {
 				String split[] = thisLine.split(":");
 				String items[] = split[0].split(" ");
 				String utilityValues[] = split[2].split(" ");
-
+				int transactionUtility = Integer.parseInt(split[1]);
 				List<Pair> revisedTransaction = new ArrayList<>();
 				for (int i = 0; i < items.length; i++) {
 					Pair pair = new Pair(Integer.parseInt(items[i]), Integer.parseInt(utilityValues[i]));
@@ -234,8 +233,7 @@ public class AlgoTKINC {
 				Collections.sort(revisedTransaction, new PairComparator());
 				for (int i = revisedTransaction.size() - 1; i >= 0; i--) {
 					Pair pair = revisedTransaction.get(i);
-//					if (EUCS_PRUNE)
-//						updateEUCSprune(i, pair, revisedTransaction, newTWU);
+					updateEUCSprune(i, pair, revisedTransaction, transactionUtility);
 					updateLeafprune(i, pair, revisedTransaction, listOfUtilityLists);
 				}
 				tid++; // increase tid number for next transaction
@@ -247,16 +245,15 @@ public class AlgoTKINC {
 				myInput.close();
 			}
 		}
-
-//		if (EUCS_PRUNE) {
-//			raisingThresholdCUDOptimize(topkstatic);
-//			removeEntry();
-//		}
+		raisingThresholdCUDOptimize(topkstatic);
 		raisingThresholdLeaf(listOfUtilityLists);
 		setLeafMapSize();
 		//removeLeafEntry();
 		leafPruneUtils = null;
 		leafRaiseValue = minUtility;
+		if (minUtility<minUtility_Global){
+			minUtility = minUtility_Global;
+		}
 		System.out.println("minUtility = " + minUtility);
 		List<UtilityList> listOfPromisingUtilityLists = new ArrayList<>();
 		for (Entry<Integer, UtilityList> entry : mapItemToUtilityList.entrySet()) {
@@ -280,6 +277,7 @@ public class AlgoTKINC {
 		checkMemory();
 		thui(itemsetBuffer, 0, null, listOfPromisingUtilityLists);
 		checkMemory();
+		minUtility_Global = minUtility;
 
 		writeResultTofile();
 		writer.close();
@@ -379,19 +377,27 @@ public class AlgoTKINC {
 		for (int i = ULs.size() - 2; i >= 0; i--) {// last item is a single item, and hence no extension
 			checkMemory();
 			UtilityList X = ULs.get(i);
+			int itemX = X.item;
 			if (X.sumIutils + X.sumRutils >= minUtility && X.sumIutils > 0) {// the utility value of zero cases can be
 																				// safely ignored, as it is unlikely to
-																				// generate a HUI; besides the lowest
+					 															// generate a HUI; besides the lowest
 																				// min utility will be 1
-//				if (EUCS_PRUNE) {
-//					Map<Integer, ItemTHUI> mapTWUF = mapFMAP.get(X.item);
-//					if (mapTWUF == null)
-//						continue;
-//				}
-
+				if(mapFMAP.get(itemX)==null){
+					continue;
+				}
 				List<UtilityList> exULs = new ArrayList<UtilityList>();
 				for (int j = i + 1; j < ULs.size(); j++) {
 					UtilityList Y = ULs.get(j);
+					int itemY = Y.item;
+					long EUCS = 0l;
+					if(mapFMAP.get(itemX).get(itemY)==null){
+						continue;
+					}else{
+						EUCS = mapFMAP.get(itemX).get(itemY).twu;
+					}
+					if (EUCS<minUtility){
+						continue;
+					}
 					candidateCount++;
 					UtilityList exul = construct(pUL, X, Y);
 					if (exul != null)
@@ -626,25 +632,6 @@ public class AlgoTKINC {
 			minUtility = leafPruneUtils.peek();
 	}
 
-	private void removeEntry() {
-		for (Entry<Integer, Map<Integer, ItemTHUI>> entry : mapFMAP.entrySet()) {
-			for (Iterator<Entry<Integer, ItemTHUI>> it = entry.getValue().entrySet().iterator(); it.hasNext();) {
-				Entry<Integer, ItemTHUI> entry2 = it.next();
-				if (entry2.getValue().twu < minUtility) {
-					it.remove();
-				}
-			}
-		}
-	}
-
-	private void removeLeafEntry() {
-		for (Entry<Integer, Map<Integer, Long>> entry : mapLeafMAP.entrySet()) {
-			for (Iterator<Entry<Integer, Long>> it = entry.getValue().entrySet().iterator(); it.hasNext();) {
-				Entry<Integer, Long> entry2 = it.next();
-				it.remove();
-			}
-		}
-	}
 
 	private void save(int[] prefix, int length, UtilityList X) {
 
